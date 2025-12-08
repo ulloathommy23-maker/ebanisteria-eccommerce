@@ -78,3 +78,67 @@ exports.getInventoryReport = async (req, res) => {
         res.status(500).json({ success: false, error: 'Server error' });
     }
 };
+
+
+exports.getDashboardStats = async (req, res) => {
+    try {
+        // 1. Order Stats
+        const orderStatsResult = await db.query(`
+            SELECT 
+                COUNT(*) FILTER (WHERE status = 'pending') as pending,
+                COUNT(*) FILTER (WHERE status = 'in_progress') as in_progress,
+                COUNT(*) FILTER (WHERE status = 'completed') as completed,
+                COUNT(*) FILTER (WHERE status = 'delivered') as delivered
+            FROM orders
+        `);
+        const orderStats = orderStatsResult.rows[0];
+
+        // 2. Low Stock Stats
+        const lowStockResult = await db.query(`
+            SELECT COUNT(*) as count FROM materials WHERE current_stock <= min_stock_alert
+        `);
+        const lowStockCount = lowStockResult.rows[0].count;
+
+        // 3. Total Customers
+        const customerResult = await db.query(`SELECT COUNT(*) as count FROM customers`);
+        const totalCustomers = customerResult.rows[0].count;
+
+        // 4. Recent Orders (Top 5)
+        const recentOrdersResult = await db.query(`
+            SELECT o.id, o.order_number, o.status, o.agreed_price, o.created_at, c.full_name as customer_name
+            FROM orders o
+            JOIN customers c ON o.customer_id = c.id
+            ORDER BY o.created_at DESC
+            LIMIT 5
+        `);
+
+        // 5. Upcoming Deliveries (Next 7 days)
+        const upcomingDeliveriesResult = await db.query(`
+            SELECT o.id, o.order_number, o.estimated_delivery, o.status, c.full_name as customer_name
+            FROM orders o
+            JOIN customers c ON o.customer_id = c.id
+            WHERE o.estimated_delivery >= CURRENT_DATE 
+            AND o.estimated_delivery <= CURRENT_DATE + INTERVAL '7 days'
+            AND o.status NOT IN ('completed', 'delivered')
+            ORDER BY o.estimated_delivery ASC
+            LIMIT 5
+        `);
+
+        res.json({
+            success: true,
+            data: {
+                stats: {
+                    ...orderStats,
+                    low_stock: lowStockCount,
+                    total_customers: totalCustomers
+                },
+                recent_orders: recentOrdersResult.rows,
+                upcoming_deliveries: upcomingDeliveriesResult.rows
+            }
+        });
+
+    } catch (error) {
+        console.error('Dashboard stats error:', error);
+        res.status(500).json({ success: false, error: 'Server error' });
+    }
+};

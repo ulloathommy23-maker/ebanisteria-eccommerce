@@ -1,8 +1,20 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
+require('dotenv').config({ path: path.join(__dirname, '../.env'), override: true });
 
-const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_I6O2Rdikjzwx@ep-morning-hall-ahotyvt4-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require';
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+    console.error('Error: DATABASE_URL is not defined in .env file');
+    process.exit(1);
+}
+
+// Debug logs
+console.log('--- DB CONNECTION DEBUG ---');
+console.log('Reading .env from:', path.join(__dirname, '../.env'));
+console.log('Connecting to:', databaseUrl.split('@')[1]); // Show only host part
+console.log('---------------------------');
 
 const pool = new Pool({
     connectionString: databaseUrl,

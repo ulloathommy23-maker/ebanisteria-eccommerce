@@ -7,5 +7,6 @@ router.use(verifyToken);
 
 router.get('/orders', reportController.getOrdersReport);
 router.get('/inventory', reportController.getInventoryReport);
+router.get('/dashboard', reportController.getDashboardStats);
 
 module.exports = router;
