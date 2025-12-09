@@ -5,8 +5,12 @@
             "destination": "/backend/api/index.js"
         },
         {
+            "source": "/assets/(.*)",
+            "destination": "/assets/$1"
+        },
+        {
             "source": "/(.*)",
-            "destination": "/frontend/$1"
+            "destination": "/index.html"
         }
     ]
 }
