@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
-import DataTable from '../components/DataTable';
-import { Download, TrendingUp, DollarSign, Package } from 'lucide-react';
+import api from '@/services/api'; // Using alias
+import DataTable from '@/components/DataTable'; // Using alias
+import { Download, TrendingUp, DollarSign, Package, FileText } from 'lucide-react';
 
 const Reports = () => {
     const [reportData, setReportData] = useState({
@@ -80,6 +80,47 @@ const Reports = () => {
         document.body.removeChild(link);
     };
 
+    const handleExportPDF = async () => {
+        try {
+            const params = {};
+            if (filters.start_date) params.start_date = filters.start_date;
+            if (filters.end_date) params.end_date = filters.end_date;
+            if (filters.status) params.status = filters.status;
+
+            const response = await api.get('/reports/orders/pdf', {
+                params,
+                responseType: 'blob' // Important for binary data
+            });
+
+            // Create a Blob from the PDF Stream
+            const file = new Blob(
+                [response.data],
+                { type: 'application/pdf' }
+            );
+
+            // Build a URL from the file
+            const fileURL = URL.createObjectURL(file);
+
+            // Open the URL on new Window
+            const pdfWindow = window.open(fileURL);
+            if (pdfWindow) {
+                pdfWindow.focus();
+            } else {
+                // Fallback for blockers: download it
+                const link = document.createElement('a');
+                link.href = fileURL;
+                link.setAttribute('download', `reporte_pedidos_${Date.now()}.pdf`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
+
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            alert('Error al exportar PDF');
+        }
+    };
+
     const columns = [
         { header: 'Fecha', accessor: 'created_at', render: (row) => new Date(row.created_at).toLocaleDateString() },
         { header: 'Pedido #', accessor: 'order_number' },
@@ -90,81 +131,55 @@ const Reports = () => {
     ];
 
     const StatCard = ({ title, value, icon: Icon, color }) => (
-        <div style={{
-            backgroundColor: 'var(--surface)',
-            padding: '24px',
-            borderRadius: '12px',
-            border: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '20px',
-            flex: 1,
-            minWidth: '250px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-        }}>
-            <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: `${color}15`, color: color }}>
+        <div className="card" style={{ flex: 1, minWidth: '250px', padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+            <div style={{ padding: '0.75rem', borderRadius: '0.625rem', backgroundColor: `${color}15`, color: color }}>
                 <Icon size={24} />
             </div>
             <div>
-                <p style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: 'var(--text-light)', fontWeight: 500 }}>{title}</p>
-                <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{value}</p>
+                <p className="text-secondary font-medium text-sm mb-1">{title}</p>
+                <p className="text-main font-bold text-xl m-0">{value}</p>
             </div>
         </div>
     );
 
     return (
-        <div style={{ padding: '30px', maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 style={{ margin: 0, color: 'var(--text-main)' }}>Reportes</h1>
-                <button
-                    onClick={handleExportCSV}
-                    style={{
-                        backgroundColor: 'var(--success)',
-                        color: 'white',
-                        padding: '10px 16px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        cursor: 'pointer',
-                        fontWeight: 500,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                    }}
-                >
-                    <Download size={18} /> Exportar CSV
-                </button>
+        <div className="w-full">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-xl md:text-2xl m-0">Reportes</h1>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleExportCSV}
+                        className="btn btn-outline"
+                    >
+                        <Download size={18} /> <span className="hidden md:inline">CSV</span>
+                    </button>
+                    <button
+                        onClick={handleExportPDF}
+                        className="btn btn-primary"
+                    >
+                        <FileText size={18} /> Exportar PDF
+                    </button>
+                </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
+            <div className="flex flex-wrap gap-4 mb-6">
                 <StatCard title="Ingresos Totales" value={`$${reportData.summary.total_value.toFixed(2)}`} icon={DollarSign} color="#10B981" />
                 <StatCard title="Total Pedidos" value={reportData.summary.total_orders} icon={TrendingUp} color="#3B82F6" />
                 <StatCard title="Valor Inventario" value={`$${(parseFloat(inventoryStats.total_value) || 0).toFixed(2)}`} icon={Package} color="#F59E0B" />
             </div>
 
-            <form onSubmit={handleApplyFilters} style={{
-                backgroundColor: 'var(--surface)',
-                padding: '24px',
-                borderRadius: '12px',
-                border: '1px solid var(--border)',
-                marginBottom: '30px',
-                display: 'flex',
-                gap: '20px',
-                alignItems: 'flex-end',
-                flexWrap: 'wrap',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-            }}>
-                <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-light)' }}>Fecha Inicio</label>
-                    <input type="date" name="start_date" value={filters.start_date} onChange={handleFilterChange} style={{ padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', color: 'var(--text-main)', backgroundColor: 'var(--bg-light)' }} />
+            <form onSubmit={handleApplyFilters} className="card p-6 mb-6 flex flex-wrap gap-4 items-end">
+                <div className="flex-1 min-w-[200px]">
+                    <label className="form-label">Fecha Inicio</label>
+                    <input type="date" name="start_date" className="form-input" value={filters.start_date} onChange={handleFilterChange} />
                 </div>
-                <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-light)' }}>Fecha Fin</label>
-                    <input type="date" name="end_date" value={filters.end_date} onChange={handleFilterChange} style={{ padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', color: 'var(--text-main)', backgroundColor: 'var(--bg-light)' }} />
+                <div className="flex-1 min-w-[200px]">
+                    <label className="form-label">Fecha Fin</label>
+                    <input type="date" name="end_date" className="form-input" value={filters.end_date} onChange={handleFilterChange} />
                 </div>
-                <div>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-light)' }}>Estado</label>
-                    <select name="status" value={filters.status} onChange={handleFilterChange} style={{ padding: '10px', borderRadius: '6px', border: '1px solid var(--border)', minWidth: '150px', color: 'var(--text-main)', backgroundColor: 'var(--bg-light)' }}>
+                <div className="flex-1 min-w-[200px]">
+                    <label className="form-label">Estado</label>
+                    <select name="status" className="form-input" value={filters.status} onChange={handleFilterChange}>
                         <option value="">Todos</option>
                         <option value="pending">Pendiente</option>
                         <option value="in_progress">En Progreso</option>
@@ -172,7 +187,7 @@ const Reports = () => {
                         <option value="delivered">Entregado</option>
                     </select>
                 </div>
-                <button type="submit" style={{ padding: '10px 24px', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}>Aplicar Filtros</button>
+                <button type="submit" className="btn btn-primary">Aplicar Filtros</button>
             </form>
 
             <DataTable

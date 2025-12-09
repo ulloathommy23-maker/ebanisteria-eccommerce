@@ -15,7 +15,7 @@ const Navigation = ({ toggleSidebar }) => {
             </button>
             <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3 text-right">
-                    <div className="hidden md:block">
+                    <div className="block">
                         <span className="block text-sm font-semibold text-main">
                             {user?.full_name}
                         </span>

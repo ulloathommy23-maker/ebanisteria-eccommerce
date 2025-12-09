@@ -142,3 +142,54 @@ exports.getDashboardStats = async (req, res) => {
         res.status(500).json({ success: false, error: 'Server error' });
     }
 };
+
+const { generateOrdersPDF } = require('../utils/pdfGenerator');
+
+exports.exportOrdersPDF = async (req, res) => {
+    try {
+        const { start_date, end_date, status } = req.query;
+
+        let query = `
+            SELECT o.*, c.full_name as customer_name
+            FROM orders o
+            JOIN customers c ON o.customer_id = c.id
+        `;
+        let params = [];
+        let whereClauses = [];
+
+        if (start_date) {
+            params.push(start_date);
+            whereClauses.push(`o.created_at >= $${params.length}`);
+        }
+        if (end_date) {
+            params.push(end_date);
+            whereClauses.push(`o.created_at <= $${params.length}`);
+        }
+        if (status) {
+            params.push(status);
+            whereClauses.push(`o.status = $${params.length}`);
+        }
+
+        if (whereClauses.length > 0) {
+            query += ' WHERE ' + whereClauses.join(' AND ');
+        }
+
+        query += ' ORDER BY o.created_at DESC';
+
+        const result = await db.query(query, params);
+
+        const pdfBuffer = await generateOrdersPDF(result.rows, { start_date, end_date, status });
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Length': pdfBuffer.length,
+            'Content-Disposition': `attachment; filename="orders_report_${Date.now()}.pdf"`
+        });
+
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        console.error('PDF Export error:', error);
+        res.status(500).json({ success: false, error: 'Server error generating PDF' });
+    }
+};

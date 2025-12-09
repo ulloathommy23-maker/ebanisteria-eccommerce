@@ -33,8 +33,8 @@ const Sidebar = ({ isOpen }) => {
                     <Hammer size={20} color="white" />
                 </div>
                 <div style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: '700', letterSpacing: '-0.02em' }}>Ebanistería</h2>
-                    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.05em' }}>MANAGEMENT</span>
+                    <h2 style={{ fontSize: '1.4rem', margin: 0, fontWeight: '800', letterSpacing: '-0.02em', color: 'white' }}>Ebanistería</h2>
+                    <span style={{ fontSize: '0.8rem', color: '#F59E0B', letterSpacing: '0.15em', fontWeight: '700' }}>MANAGEMENT</span>
                 </div>
             </div>
 
