@@ -11,13 +11,27 @@ app.use(helmet());
 app.use(cors({
     origin: (origin, callback) => {
         const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',');
+
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
+
+        // Check allowed origins list
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            return callback(null, true);
         }
+
+        // Allow Vercel preview/production deployments
+        if (origin.endsWith('.vercel.app')) {
+            return callback(null, true);
+        }
+
+        // Development mode fallback
+        if (process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+
+        console.log('Blocked by CORS:', origin); // Log blocked origin for debugging
+        callback(new Error('Not allowed by CORS'));
     },
     credentials: true
 }));
